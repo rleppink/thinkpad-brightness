@@ -36,11 +36,6 @@ changeBrightness x = do
 
     writeFile (backlightFilePath "brightness") $ show newBrightness
 
-    putStrLn $ 
-        "Brightness is currently "    ++ show currentBrightness ++
-        ", increasing brightness by " ++ show x ++
-        ", new value will be "        ++ show newBrightness
-
 
 calcDeltaBrightness :: Int -> Int-> Int -> Int -> Int
 calcDeltaBrightness current min max delta
