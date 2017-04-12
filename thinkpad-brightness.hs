@@ -5,47 +5,74 @@ import System.Exit
 
 
 main :: IO ()
-main = getArgs >>= parse
+main = getArgs >>= parse >>= putStrLn
 
 
 parse :: [String] -> IO String
-parse []        = usage                              >> exitSuccess
-parse ["-h"]    = usage                              >> exitSuccess
-parse ["-v"]    = version                            >> exitSuccess
-parse ["-i"]    = specify "-i"                       >> exitSuccess
-parse ["-d"]    = specify "-d"                       >> exitSuccess
-parse ["-i", x] = changeBrightness (read x :: Int)   >> exitSuccess
-parse ["-d", x] = changeBrightness (negate $ read x :: Int) >> exitSuccess
+parse ["-v"]     = version                                       >> exitSuccess
+
+parse []         = usage                                         >> exitSuccess
+parse ["-h"]     = usage                                         >> exitSuccess
+
+parse ["-i"]     = specify "-i"                                  >> exitSuccess
+parse ["-d"]     = specify "-d"                                  >> exitSuccess
+parse ["-s"]     = specify "-s"                                  >> exitSuccess
+parse ["-si"]    = specify "-si"                                 >> exitSuccess
+parse ["-sd"]    = specify "-sd"                                 >> exitSuccess
+
+parse ["-i", x]  = changeBrightness (read x :: Int)              >> exitSuccess
+parse ["-d", x]  = changeBrightness (negate $ read x :: Int)     >> exitSuccess
+
+parse ["-s", x]  = setBrightness (read x :: Int)                 >> exitSuccess
+
 
 backlightFilePath :: String -> String
 backlightFilePath filename  = "/sys/class/backlight/intel_backlight/" ++ filename
 
+
+brightnessFilePath :: String
+brightnessFilePath = backlightFilePath "brightness"
+
+
+maxBrightnessFilePath :: String
+maxBrightnessFilePath = backlightFilePath "max_brightness"
+
+
 changeBrightness :: Int -> IO ()
 changeBrightness x = do
-    brightnessFileContents <- readFile $ backlightFilePath "brightness"
+    brightnessFileContents    <- readFile brightnessFilePath
     seq (length brightnessFileContents) (return())  -- Stupid hack
-    maxBrightnessFileContents <- readFile $ backlightFilePath "max_brightness"
 
-    let currentBrightness = read brightnessFileContents :: Int
-    let maxBrightness = read maxBrightnessFileContents :: Int
+    maxBrightnessFileContents <- readFile maxBrightnessFilePath
 
-    let newBrightness = calcBrightnessDelta currentBrightness 10 maxBrightness x
+    let currentBrightness = read brightnessFileContents    :: Int
+    let maxBrightness     = read maxBrightnessFileContents :: Int
 
-    writeFile (backlightFilePath "brightness") $ show newBrightness
+    let newBrightness = calcBrightnessDelta currentBrightness 1 maxBrightness x
+
+    setBrightness newBrightness
+
 
 calcBrightnessDelta :: Int -> Int-> Int -> Int -> Int
 calcBrightnessDelta current min max delta
-  | (newValue == min) || (newValue == max) = newValue
-  | (min < newValue)  && (newValue < max)  = newValue
-  | newValue > max                         = max
-  | newValue < min                         = min
-  where newValue = current + delta
+    | (newValue == min) || (newValue == max) = newValue
+    | (min < newValue)  && (newValue < max)  = newValue
+    | newValue > max                         = max
+    | newValue < min                         = min
+    where newValue = current + delta
+
+
+setBrightness :: Int -> IO ()
+setBrightness x = writeFile (backlightFilePath "brightness") $ show x
+
 
 specify :: String -> IO ()
 specify x = putStrLn $ x ++ " needs an argument"
 
+
 usage :: IO ()
 usage = putStrLn "Usage: tbr [-id] [amount]"
+
 
 version :: IO ()
 version = putStrLn "Thinkpad Brightness v0.1"
