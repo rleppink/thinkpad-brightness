@@ -28,6 +28,8 @@ parse ["-s", x]  = setBrightness (read x :: Int)                 >> exitSuccess
 parse ["-si", x] = stepChangeBrightness (read x :: Int)          >> exitSuccess
 parse ["-sd", x] = stepChangeBrightness (negate $ read x :: Int) >> exitSuccess
 
+parse _          = usage                                         >> exitSuccess
+
 
 backlightFilePath :: String -> String
 backlightFilePath filename  = "/sys/class/backlight/intel_backlight/" ++ filename
