@@ -24,6 +24,7 @@ parse ["-i", x]  = changeBrightness (read x :: Int)              >> exitSuccess
 parse ["-d", x]  = changeBrightness (negate $ read x :: Int)     >> exitSuccess
 
 parse ["-s", x]  = setBrightness (read x :: Int)                 >> exitSuccess
+parse ["-g"]     = getBrightness                                 >> exitSuccess
  
 parse ["-si", x] = stepChangeBrightness (read x :: Int)          >> exitSuccess
 parse ["-sd", x] = stepChangeBrightness (negate $ read x :: Int) >> exitSuccess
@@ -79,6 +80,10 @@ closestStep 0 = 0
 closestStep 1 = 1
 closestStep 3000 = 15
 closestStep y = round $ logBase 1.6357 (fromIntegral y / 1.8688)
+
+
+getBrightness :: IO ()
+getBrightness = putStrLn $ readFile brightnessFilePath
 
 
 setBrightness :: Int -> IO ()
