@@ -27,6 +27,11 @@ parse ["-i", "--gradual", x] =
 parse ["-d", "--gradual", x] =
     changeBrightness (gradualStep (negate $ read x :: Int))             >> exitSuccess
 
+parse ["-i", "--binary", x] =
+    changeBrightness (binaryStep (read x :: Int))                       >> exitSuccess
+parse ["-d", "--binary", x] =
+    changeBrightness (binaryStep (negate $ read x :: Int))              >> exitSuccess
+
 parse []         = usage                                                >> exitSuccess
 parse ["-h"]     = usage                                                >> exitSuccess
 parse _          = usage                                                >> exitSuccess
@@ -54,14 +59,15 @@ usage :: IO ()
 usage = putStrLn "Usage: tbr [-id] [amount]"
 
 version :: IO ()
-version = putStrLn "Thinkpad Brightness v0.1"
+version = putStrLn "Thinkpad Brightness v0.2"
 
 changeBrightness :: (Int -> Int) -> IO ()
 changeBrightness f = do
     maxBrightnessFileContents <- readFile maxBrightnessFilePath
     brightnessFileContents    <- readFile brightnessFilePath
 
-    -- Hacky solution to force readFile to read the entire file, before trying to write to it later
+    -- Hacky solution to Haskell's lazy evaluation
+    -- Force readFile to read the entire file, before trying to write to it later
     seq (length brightnessFileContents) (return())
 
     let maxBrightness     = read maxBrightnessFileContents :: Int
@@ -80,7 +86,7 @@ sanitizeBrightness max new
 
 
 --
--- Flat change brightness calculator
+-- Flat step brightness calculator
 -- Just add the delta to the current brightness
 --
 flatStep :: Int -> Int -> Int
@@ -88,7 +94,7 @@ flatStep delta current = current + delta
 
 
 --
--- Gradual change brightness calculator
+-- Gradual step brightness calculator
 -- Use a gradual increase appropriate for Thinkpad screen's 0-3000 brightness in 16 steps
 --
 gradualStep :: Int -> Int -> Int
@@ -106,5 +112,19 @@ closestGradualStep :: Int -> Int
 closestGradualStep 0 = 0
 closestGradualStep 1 = 1
 closestGradualStep 2 = 1
-closestGradualStep y = round $ logBase 1.6357 (fromIntegral y / 1.8688)
+closestGradualStep x = round $ logBase 1.6357 (fromIntegral x / 1.8688)
+
+
+--
+-- Binary step brightness calculator.
+--
+--
+binaryStep :: Int -> Int -> Int
+binaryStep delta current
+  | step < 0  = 0
+  | otherwise = 2 ^ step
+      where step = (closestBinaryStep current) + delta
+
+closestBinaryStep :: Int -> Int
+closestBinaryStep x = round $ logBase 2 (fromIntegral x)
 
