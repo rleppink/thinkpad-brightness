@@ -14,7 +14,7 @@ parse ["-v"]     = version                                              >> exitS
 
 parse ["-i"]     = needsArgument "-i"                                   >> exitSuccess
 parse ["-d"]     = needsArgument "-d"                                   >> exitSuccess
-parse ["-w"]     = needsArgument "-s"                                   >> exitSuccess
+parse ["-w"]     = needsArgument "-w"                                   >> exitSuccess
 
 parse ["-g"]     = printBrightness                                      >> exitSuccess
 parse ["-w", x]  = writeBrightness (read x :: Int)                      >> exitSuccess
@@ -56,7 +56,7 @@ needsArgument :: String -> IO ()
 needsArgument x = putStrLn $ x ++ " needs an argument"
 
 usage :: IO ()
-usage = putStrLn "Usage: tbr [-id] [amount]"
+usage = putStrLn "Usage: tbr [-idw] [--calculator] [amount]"
 
 version :: IO ()
 version = putStrLn "Thinkpad Brightness v0.2"
@@ -117,7 +117,7 @@ closestGradualStep x = round $ logBase 1.6357 (fromIntegral x / 1.8688)
 
 --
 -- Binary step brightness calculator.
---
+-- 1, 2, 4, 8 etc...
 --
 binaryStep :: Int -> Int -> Int
 binaryStep delta current
