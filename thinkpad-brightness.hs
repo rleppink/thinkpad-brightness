@@ -10,26 +10,26 @@ main = getArgs >>= parse >>= putStrLn
 
 
 parse :: [String] -> IO String
-parse ["-v"]     = version                                       >> exitSuccess
+parse ["-v"]     = version                                              >> exitSuccess
 
-parse ["-i"]     = needsArgument "-i"                            >> exitSuccess
-parse ["-d"]     = needsArgument "-d"                            >> exitSuccess
-parse ["-s"]     = needsArgument "-s"                            >> exitSuccess
-parse ["-si"]    = needsArgument "-si"                           >> exitSuccess
-parse ["-sd"]    = needsArgument "-sd"                           >> exitSuccess
+parse ["-i"]     = needsArgument "-i"                                   >> exitSuccess
+parse ["-d"]     = needsArgument "-d"                                   >> exitSuccess
+parse ["-w"]     = needsArgument "-s"                                   >> exitSuccess
 
-parse ["-s", x]  = writeBrightness (read x :: Int)               >> exitSuccess
-parse ["-g"]     = readBrightness                                >> exitSuccess
+parse ["-g"]     = printBrightness                                      >> exitSuccess
+parse ["-w", x]  = writeBrightness (read x :: Int)                      >> exitSuccess
 
--- parse ["-i", x]  = changeBrightness (read x :: Int)              >> exitSuccess
--- parse ["-d", x]  = changeBrightness (negate $ read x :: Int)     >> exitSuccess
+parse ["-i", x]  = changeBrightness (flatStep (read x :: Int))          >> exitSuccess
+parse ["-d", x]  = changeBrightness (flatStep (negate $ read x :: Int)) >> exitSuccess
 
--- parse ["-si", x] = stepChangeBrightness (read x :: Int)          >> exitSuccess
--- parse ["-sd", x] = stepChangeBrightness (negate $ read x :: Int) >> exitSuccess
+parse ["-i", "--gradual", x] =
+    changeBrightness (gradualStep (read x :: Int))                      >> exitSuccess
+parse ["-d", "--gradual", x] =
+    changeBrightness (gradualStep (negate $ read x :: Int))             >> exitSuccess
 
-parse []         = usage                                         >> exitSuccess
-parse ["-h"]     = usage                                         >> exitSuccess
-parse _          = usage                                         >> exitSuccess
+parse []         = usage                                                >> exitSuccess
+parse ["-h"]     = usage                                                >> exitSuccess
+parse _          = usage                                                >> exitSuccess
 
 
 backlightFilePath :: String -> String
@@ -41,8 +41,8 @@ brightnessFilePath = backlightFilePath "brightness"
 maxBrightnessFilePath :: String
 maxBrightnessFilePath = backlightFilePath "max_brightness"
 
-readBrightness :: IO ()
-readBrightness = putStrLn =<< readFile brightnessFilePath
+printBrightness :: IO ()
+printBrightness = putStrLn =<< readFile brightnessFilePath
 
 writeBrightness :: Int -> IO ()
 writeBrightness x = writeFile brightnessFilePath $ show x
@@ -56,55 +56,55 @@ usage = putStrLn "Usage: tbr [-id] [amount]"
 version :: IO ()
 version = putStrLn "Thinkpad Brightness v0.1"
 
-changeBrightness :: (Int -> Int -> Int -> Int) -> IO ()
+changeBrightness :: (Int -> Int) -> IO ()
 changeBrightness f = do
     maxBrightnessFileContents <- readFile maxBrightnessFilePath
     brightnessFileContents    <- readFile brightnessFilePath
-    -- Hacky solution to force readFile to read the entire file, before trying to write to it
+
+    -- Hacky solution to force readFile to read the entire file, before trying to write to it later
     seq (length brightnessFileContents) (return())
 
     let maxBrightness     = read maxBrightnessFileContents :: Int
     let currentBrightness = read brightnessFileContents    :: Int
 
-    -- let newBrightness     = f currentBrightness maxBrightness args
+    let newBrightness = sanitizeBrightness maxBrightness $ f currentBrightness
 
-    -- writeBrightness newBrightness
-    putStrLn "some"
+    writeBrightness newBrightness
+
+sanitizeBrightness :: Int -> Int -> Int
+sanitizeBrightness max new
+    | (new == 0) || (new == max) = new
+    | (new >  0) && (new <  max) = new
+    | (new > max)                = max
+    | (new < 0)                  = 0
 
 
 --
 -- Flat change brightness calculator
+-- Just add the delta to the current brightness
 --
--- flatChange :: Int -> (Int -> Int -> Int -> Int)
--- flatChange args =
-    -- flatBrightnessDelta currentBrightness maxBrightness x
-
--- flatBrightnessDelta :: Int -> Int -> Int -> Int
--- flatBrightnessDelta current max delta
-    -- | (newValue == 0) || (newValue == max) = newValue
-    -- | (0 < newValue)  && (newValue < max)  = newValue
-    -- | newValue > max                       = max
-    -- | newValue < 0                         = 0
-    -- where newValue = current + delta
+flatStep :: Int -> Int -> Int
+flatStep delta current = current + delta
 
 
--- 
--- Step change brightness calculator, using a gradual increase appropriate for Thinkpad screen's
--- 0-3000 brightness in 15 steps.
 --
-gradualStepChange :: Int -> Int -> Int -> Int
-gradualStepChange current max delta =
-    calcStep $ closestStep current + delta
+-- Gradual change brightness calculator
+-- Use a gradual increase appropriate for Thinkpad screen's 0-3000 brightness in 16 steps
+--
+gradualStep :: Int -> Int -> Int
+gradualStep delta current
+  | step <= 0 = 0
+  | otherwise = calcGradualBrightness step
+      where step = (closestGradualStep current) + delta
 
-calcStep :: Int -> Int
-calcStep 0 = 0
-calcStep 1 = 1
-calcStep 3000 = 15
-calcStep x = round $ 1.8688 * (1.6357 ^ x)
+calcGradualBrightness :: Int -> Int
+calcGradualBrightness 0 = 0
+calcGradualBrightness 1 = 1
+calcGradualBrightness x = round $ 1.8688 * (1.6357 ^ x)
 
-closestStep :: Int -> Int
-closestStep 0 = 0
-closestStep 1 = 1
-closestStep 3000 = 15
-closestStep y = round $ logBase 1.6357 (fromIntegral y / 1.8688)
+closestGradualStep :: Int -> Int
+closestGradualStep 0 = 0
+closestGradualStep 1 = 1
+closestGradualStep 2 = 1
+closestGradualStep y = round $ logBase 1.6357 (fromIntegral y / 1.8688)
 

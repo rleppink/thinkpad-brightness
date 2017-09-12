@@ -1,3 +1,7 @@
 thinkpad-brightness
 *.o
 *.hi
+
+# Testing files
+brightness
+max_brightness
