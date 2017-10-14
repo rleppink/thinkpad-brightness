@@ -19,6 +19,8 @@ parse ["-w"]     = needsArgument "-w"                                   >> exitS
 parse ["-g"]     = printBrightness                                      >> exitSuccess
 parse ["-w", x]  = writeBrightness (read x :: Int)                      >> exitSuccess
 
+parse ["-t"]     = changeBrightness (toggleStep)                        >> exitSuccess
+
 parse ["-i", x]  = changeBrightness (flatStep (read x :: Int))          >> exitSuccess
 parse ["-d", x]  = changeBrightness (flatStep (negate $ read x :: Int)) >> exitSuccess
 
@@ -56,7 +58,7 @@ needsArgument :: String -> IO ()
 needsArgument x = putStrLn $ x ++ " needs an argument"
 
 usage :: IO ()
-usage = putStrLn "Usage: tbr [-idw] [--calculator] [amount]"
+usage = putStrLn "Usage: tpb [-idw] [--calculator] [amount]"
 
 version :: IO ()
 version = putStrLn "Thinkpad Brightness v0.2"
@@ -83,6 +85,15 @@ sanitizeBrightness max new
     | (new >  0) && (new <  max) = new
     | (new > max)                = max
     | (new < 0)                  = 0
+
+
+--
+-- Toggle brightness calculator
+--
+toggleStep :: Int -> Int
+toggleStep current
+  | current == 0 = 3000
+  | otherwise    = 0
 
 
 --
