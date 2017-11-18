@@ -1,5 +1,4 @@
-
--- stack --resolver lts-9.12 script
+module Main where
 
 
 import System.Environment
