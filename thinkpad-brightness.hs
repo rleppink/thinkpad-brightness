@@ -1,5 +1,6 @@
-#!/usr/bin/env stack
--- stack --resolver lts-9.4 script
+
+-- stack --resolver lts-9.12 script
+
 
 import System.Environment
 import System.Exit
@@ -19,7 +20,7 @@ parse ["-w"]     = needsArgument "-w"                                   >> exitS
 parse ["-g"]     = printBrightness                                      >> exitSuccess
 parse ["-w", x]  = writeBrightness (read x :: Int)                      >> exitSuccess
 
-parse ["-t"]     = changeBrightness (toggleStep)                        >> exitSuccess
+parse ["-t"]     = changeBrightness toggleStep                          >> exitSuccess
 
 parse ["-i", x]  = changeBrightness (flatStep (read x :: Int))          >> exitSuccess
 parse ["-d", x]  = changeBrightness (flatStep (negate $ read x :: Int)) >> exitSuccess
@@ -80,11 +81,12 @@ changeBrightness f = do
     writeBrightness newBrightness
 
 sanitizeBrightness :: Int -> Int -> Int
-sanitizeBrightness max new
-    | (new == 0) || (new == max) = new
-    | (new >  0) && (new <  max) = new
-    | (new > max)                = max
-    | (new < 0)                  = 0
+sanitizeBrightness maxB new
+    | (new == 0) || (new == maxB) = new
+    | (new >  0) && (new <  maxB) = new
+    | new > maxB                  = maxB
+    | new < 0                     = 0
+    | otherwise                   = 0
 
 
 --
@@ -112,18 +114,18 @@ gradualStep :: Int -> Int -> Int
 gradualStep delta current
   | step <= 0 = 0
   | otherwise = calcGradualBrightness step
-      where step = (closestGradualStep current) + delta
+      where step = closestGradualStep current + delta
 
 calcGradualBrightness :: Int -> Int
 calcGradualBrightness 0 = 0
 calcGradualBrightness 1 = 1
-calcGradualBrightness x = round $ 1.8688 * (1.6357 ^ x)
+calcGradualBrightness x = round $ (1.8688 :: Double)  * (1.6357 ^ x)
 
 closestGradualStep :: Int -> Int
 closestGradualStep 0 = 0
 closestGradualStep 1 = 1
 closestGradualStep 2 = 1
-closestGradualStep x = round $ logBase 1.6357 (fromIntegral x / 1.8688)
+closestGradualStep x = round $ logBase (1.6357 :: Double) (fromIntegral x / 1.8688)
 
 
 --
@@ -133,9 +135,10 @@ closestGradualStep x = round $ logBase 1.6357 (fromIntegral x / 1.8688)
 binaryStep :: Int -> Int -> Int
 binaryStep delta current
   | step < 0  = 0
+  | step == 0 = 1
   | otherwise = 2 ^ step
-      where step = (closestBinaryStep current) + delta
+      where step = closestBinaryStep current + delta
 
 closestBinaryStep :: Int -> Int
-closestBinaryStep x = round $ logBase 2 (fromIntegral x)
+closestBinaryStep x = round $ logBase (2 :: Double) (fromIntegral x)
 
