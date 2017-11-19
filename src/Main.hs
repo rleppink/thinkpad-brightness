@@ -88,27 +88,21 @@ sanitizeBrightness maxB new
     | otherwise                   = 0
 
 
---
 -- Toggle brightness calculator
---
 toggleStep :: Int -> Int
 toggleStep current
   | current == 0 = 3000
   | otherwise    = 0
 
 
---
 -- Flat step brightness calculator
 -- Just add the delta to the current brightness
---
 flatStep :: Int -> Int -> Int
 flatStep delta current = current + delta
 
 
---
 -- Gradual step brightness calculator
 -- Use a gradual increase appropriate for Thinkpad screen's 0-3000 brightness in 16 steps
---
 gradualStep :: Int -> Int -> Int
 gradualStep delta current
   | step <= 0 = 0
@@ -127,17 +121,17 @@ closestGradualStep 2 = 1
 closestGradualStep x = round $ logBase (1.6357 :: Double) (fromIntegral x / 1.8688)
 
 
---
 -- Binary step brightness calculator.
 -- 1, 2, 4, 8 etc...
---
 binaryStep :: Int -> Int -> Int
 binaryStep delta current
-  | step < 0  = 0
-  | step == 0 = 1
-  | otherwise = 2 ^ step
-      where step = closestBinaryStep current + delta
+  | current == 0 && delta ==  1 = 1
+  | current == 2 && delta == -1 = 1
+  | nextStep + delta < 0        = 0
+  | otherwise                   = 2 ^ nextStep
+  where nextStep = closestBinaryStep current + delta
 
 closestBinaryStep :: Int -> Int
-closestBinaryStep x = round $ logBase (2 :: Double) (fromIntegral x)
-
+closestBinaryStep x
+  | x == 0    = 0
+  | otherwise = round (logBase (2 :: Double) (fromIntegral x))
